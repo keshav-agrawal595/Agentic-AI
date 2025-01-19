@@ -2,8 +2,8 @@ from textwrap import dedent
 from phi.assistant import Assistant
 from phi.tools.serpapi_tools import SerpApiTools
 import streamlit as st
-from phi.llm.google import Gemini
 import os
+from phi.model.google import Gemini
 
 # Set up the Streamlit app
 st.title("AI Blog Writer 📝")
@@ -18,27 +18,29 @@ serp_api_key = os.environ['SERPER_API_KEY']
 if gemini_api_key and serp_api_key:
     researcher = Assistant(
         name="Researcher",
-        role="Searches for blog topics, ideas, and content inspiration based on user preferences",
-        llm=Gemini(id="gemini-1.5-flash"),
+        role="Searches for blog topic-related information and generates relevant references",
+        model=Gemini(id="gemini-1.5-flash"),
         description=dedent(
             """\
-        You are a world-class content researcher. Given a blog topic and writing style preferences, generate a list of search terms for finding relevant content ideas, trends, and research.
-        Then search the web for each term, analyze the results, and return the 10 most relevant content ideas.
-        """
+            You are a world-class blog researcher. Given a blog topic and target audience, generate a list of search terms for finding relevant articles, research papers, and other resources.
+            Then search the web for each term, analyze the results, and return the 10 most relevant insights.
+            """
         ),
-        instructions=[ 
-            "Given a blog topic and style preferences, first generate a list of 3 search terms related to the topic and preferences.",
-            "For each search term, `search_google` and analyze the results.",
-            "From the results of all searches, return the 10 most relevant content ideas to the user's preferences.",
-            "Remember: the quality of the content ideas is important.",
+        instructions=[
+            "Generate a list of 3 search terms related to the topic and audience.",
+            "Search the web for each term using the SerpAPI tool.",
+            "Analyze the results and return the 10 most relevant insights or references.",
         ],
         tools=[SerpApiTools(api_key=serp_api_key)],
+        show_tool_calls=True,
         add_datetime_to_instructions=True,
+        markdown=True,
     )
+
     writer = Assistant(
         name="Writer",
         role="Generates a draft blog post based on user preferences and research results",
-        llm=Gemini(id="gemini-1.5-flash"),
+        model=Gemini(id="gemini-1.5-flash"),
         description=dedent(
             """\
         You are an expert blog writer. Given a blog topic, style preferences, and a list of content research results,
@@ -55,15 +57,25 @@ if gemini_api_key and serp_api_key:
         ],
         add_datetime_to_instructions=True,
         add_chat_history_to_prompt=True,
+        show_tool_calls=True,
         num_history_messages=3,
+        markdown=True,
     )
 
-    # Input fields for the user's blog topic and style preferences
-    blog_topic = st.text_input("What blog topic are you writing about?")
-    style_preference = st.text_input("What style would you like the blog post to be written in? (e.g., casual, professional, informative)")
+    # Input fields for the user's blog topic and target audience
+    topic = st.text_input("Enter the blog topic:")
+    audience = st.text_input("Who is the target audience?")
 
-    if st.button("Generate Blog Post"):
-        with st.spinner("Processing..."):
-            # Get the response from the assistant
-            response = writer.run(f"Blog on {blog_topic} with style {style_preference}", stream=False)
-            st.write(response)
+    if st.button("Generate Blog"):
+        with st.spinner("Researching and writing..."):
+            # Get the research results
+            research_results = researcher.run(f"Research blog topic: {topic} for the audience: {audience}", stream=False)
+            
+            # Generate the blog post
+            blog = writer.run(
+                f"Write a blog on the topic '{topic}' for the audience '{audience}' using the following research:\n\n{research_results}",
+                stream=False,
+            )
+            st.write("### Generated Blog:")
+            st.write(blog)
+

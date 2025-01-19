@@ -54,9 +54,15 @@ if openai_api_key and serp_api_key:
     audience = st.text_input("Who is the target audience?")
 
     if st.button("Generate Blog"):
-        with st.spinner("Processing..."):
-            # Research phase
-            research_results = researcher.run(f"Topic: {topic}", stream=False)
-            # Writing phase
-            blog = writer.run(f"Topic: {topic}\nAudience: {audience}\nResearch: {research_results}", stream=False)
+        with st.spinner("Researching and writing..."):
+            # Get the research results
+            research_results = researcher.run(f"Research blog topic: {topic} for the audience: {audience}", stream=False)
+            
+            # Generate the blog post
+            blog = writer.run(
+                f"Write a blog on the topic '{topic}' for the audience '{audience}' using the following research:\n\n{research_results}",
+                stream=False,
+            )
+            st.write("### Generated Blog:")
             st.write(blog)
+

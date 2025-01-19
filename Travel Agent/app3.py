@@ -64,7 +64,10 @@ if groq_api_key and serp_api_key:
     num_days = st.number_input("How many days do you want to travel for?", min_value=1, max_value=30, value=7)
 
     if st.button("Generate Itinerary"):
-        with st.spinner("Processing..."):
+        with st.spinner("Researching and writing..."):
+            # Get the research results
+            research_results = researcher.run(f"Searche for travel destinations, activities, and accommodations in '{destination}' for '{num_days}' days", stream=False)
+
             # Get the response from the assistant
-            response = planner.run(f"{destination} for {num_days} days", stream=False)
+            response = planner.run(f"Plan a trip for {destination} for {num_days} days, using the following research:\n\n{research_results}", stream=False)
             st.write(response)

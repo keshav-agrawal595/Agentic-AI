@@ -64,8 +64,6 @@ if groq_api_key and serp_api_key:
         with st.spinner("Researching and writing..."):
             # Get the research results
             research_results = researcher.run(f"Research blog topic: {topic} for the audience: {audience}", stream=False)
-            st.write("### Research Results:")
-            st.write(research_results)
 
             # Generate the blog post
             blog = writer.run(

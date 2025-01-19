@@ -2,8 +2,9 @@ from textwrap import dedent
 from phi.assistant import Assistant
 import streamlit as st
 from phi.llm.openai import OpenAIChat
+from phi.tools.youtube_tools import YouTubeTools
 import os
-from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
+from phi.tools.duckduckgo import DuckDuckGo
 
 # Set up the Streamlit app
 st.title("YouTube Video Summarizer 🎥")
@@ -21,13 +22,17 @@ if openai_api_key:
         llm=OpenAIChat(model="gpt-4o", api_key=openai_api_key),
         description=dedent(
             """\
-        You are an AI that fetches captions from YouTube videos. Given a YouTube video URL, fetch its captions for further analysis.
+        You are a Youtube Agent that fetches captions from YouTube videos. Given a YouTube video URL, fetch its captions for further analysis. 
+        The captions can be in any language. Don't ask for any confirmation, just give me the captions.
         """
         ),
         instructions=[
-            "Fetch the captions from the given YouTube video URL.",
+            "No matter what is the captions langauge, Fetch the captions from the given YouTube video URL.",
         ],
+        tools=[YouTubeTools(),DuckDuckGo()],
         add_datetime_to_instructions=True,
+        show_tool_calls=True,
+        get_video_captions = True,
     )
 
     # Second agent to summarize the captions with a focus on quality and details
@@ -49,50 +54,19 @@ if openai_api_key:
             "Provide a structured summary that highlights the main themes and conclusions.",
             "Focus on clarity, coherence, and detail in your summary.",
         ],
+        tools=[YouTubeTools(),DuckDuckGo()],
         add_datetime_to_instructions=True,
+        show_tool_calls=True,
+        get_video_captions = True,
     )
 
     # Input field for YouTube video URL
     video_url = st.text_input("Enter YouTube video URL:")
 
-    def get_video_id(url):
-        # Extract video ID from YouTube URL
-        if "youtube.com/watch?v=" in url:
-            return url.split("v=")[-1]
-        return None
-
-    def fetch_captions(video_id, languages=["en", "hi"]):
-        # Fetch captions using youtube-transcript-api (try both English and Hindi)
-        try:
-            transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=languages)
-            # Return the transcript in a simple string format
-            caption_text = "\n".join([entry['text'] for entry in transcript])
-            return caption_text
-        except TranscriptsDisabled:
-            st.error("Captions are disabled for this video.")
-            return None
-        except NoTranscriptFound:
-            st.error("No transcript found for this video in the requested languages.")
-            return None
-        except Exception as e:
-            st.error(f"Error fetching captions: {str(e)}")
-            return None
-
     if st.button("Summarize Video"):
-        if video_url:
-            video_id = get_video_id(video_url)
-            if video_id:
-                with st.spinner("Fetching captions and summarizing..."):
-                    # Fetch captions in English or Hindi
-                    captions = fetch_captions(video_id)
+            with st.spinner("Fetching captions and summarizing..."):
+                caption_results = caption_fetcher.run(f"Youtube Video Link : {video_url}", stream=False)
 
-                    if captions:
-                        # Pass the captions to the second agent (Summarizer) for summarization
-                        summary = summarizer.run(captions, stream=False)
-                        st.write(summary)
-                    else:
-                        st.error("Could not fetch captions for this video.")
-            else:
-                st.error("Invalid YouTube video URL.")
-        else:
-            st.error("Please enter a valid YouTube video URL.")
+                # Pass the captions to the second agent (Summarizer) for summarization
+                summary = summarizer.run(f"Summarize the youtube video : {video_url} using the following caption data of the video : \n\n{caption_results}", stream=False)
+                st.write(summary)

@@ -58,12 +58,19 @@ if groq_api_key and serp_api_key:
         num_history_messages=3,
     )
 
-    # Input fields for the user's blog topic and style preferences
-    blog_topic = st.text_input("What blog topic are you writing about?")
-    style_preference = st.text_input("What style would you like the blog post to be written in? (e.g., casual, professional, informative)")
+    # Input fields for the user's blog topic and target audience
+    topic = st.text_input("Enter the blog topic:")
+    audience = st.text_input("Who is the target audience?")
 
-    if st.button("Generate Blog Post"):
-        with st.spinner("Processing..."):
-            # Get the response from the assistant
-            response = writer.run(f"Blog on {blog_topic} with style {style_preference}", stream=False)
-            st.write(response)
+    if st.button("Generate Blog"):
+        with st.spinner("Researching and writing..."):
+            # Get the research results
+            research_results = researcher.run(f"Research blog topic: {topic} for the audience: {audience}", stream=False)
+
+            # Generate the blog post
+            blog = writer.run(
+                f"Write a blog on the topic '{topic}' for the audience '{audience}' using the following research:\n\n{research_results}",
+                stream=False,
+            )
+            st.write("### Generated Blog:")
+            st.write(blog)

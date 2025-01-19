@@ -2,7 +2,7 @@ from textwrap import dedent
 from phi.assistant import Assistant
 from phi.tools.serpapi_tools import SerpApiTools
 import streamlit as st
-from phi.llm.google import Gemini
+from phi.model.google import Gemini
 import os
 
 # Set up the Streamlit app
@@ -19,7 +19,7 @@ if gemini_api_key and serp_api_key:
     researcher = Assistant(
         name="Researcher",
         role="Searches for travel destinations, activities, and accommodations based on user preferences",
-        llm=Gemini(id="gemini-1.5-flash"),
+        model=Gemini(id="gemini-1.5-flash"),
         description=dedent(
             """\
         You are a world-class travel researcher. Given a travel destination and the number of days the user wants to travel for,
@@ -35,11 +35,12 @@ if gemini_api_key and serp_api_key:
         ],
         tools=[SerpApiTools(api_key=serp_api_key)],
         add_datetime_to_instructions=True,
+        markdown=True,
     )
     planner = Assistant(
         name="Planner",
         role="Generates a draft itinerary based on user preferences and research results",
-        llm=Gemini(id="gemini-1.5-flash"),
+        model=Gemini(id="gemini-1.5-flash"),
         description=dedent(
             """\
         You are a senior travel planner. Given a travel destination, the number of days the user wants to travel for, and a list of research results,
@@ -57,6 +58,7 @@ if gemini_api_key and serp_api_key:
         add_datetime_to_instructions=True,
         add_chat_history_to_prompt=True,
         num_history_messages=3,
+        markdown=True,
     )
 
     # Input fields for the user's destination and the number of days they want to travel for
@@ -64,7 +66,10 @@ if gemini_api_key and serp_api_key:
     num_days = st.number_input("How many days do you want to travel for?", min_value=1, max_value=30, value=7)
 
     if st.button("Generate Itinerary"):
-        with st.spinner("Processing..."):
+        with st.spinner("Researching and writing..."):
+            # Get the research results
+            research_results = researcher.run(f"Searche for travel destinations, activities, and accommodations in '{destination}' for '{num_days}' days", stream=False)
+
             # Get the response from the assistant
-            response = planner.run(f"{destination} for {num_days} days", stream=False)
+            response = planner.run(f"Plan a trip for {destination} for {num_days} days, using the following research:\n\n{research_results}", stream=False)
             st.write(response)

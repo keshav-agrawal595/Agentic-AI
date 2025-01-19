@@ -65,6 +65,10 @@ if groq_api_key and serp_api_key:
 
     if st.button("Generate LinkedIn Post"):
         with st.spinner("Processing..."):
-            # Get the response from the assistant
-            response = writer.run(f"LinkedIn post on {post_topic} with style {style_preference}", stream=False)
+            # Get the research results
+            research_results = researcher.run(f"Linkedin Post topic: {post_topic} for the style preference: {style_preference}", stream=False)
+
+            # Generate the Linkedin Post Content
+            response = writer.run(f"LinkedIn post on '{post_topic}' with style '{style_preference}' using the following research:\n\n{research_results}", stream=False)
+            st.write("Linkedin Post Content")
             st.write(response)

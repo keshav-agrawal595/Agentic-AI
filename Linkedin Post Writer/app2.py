@@ -2,7 +2,7 @@ from textwrap import dedent
 from phi.assistant import Assistant
 from phi.tools.serpapi_tools import SerpApiTools
 import streamlit as st
-from phi.llm.google import Gemini
+from phi.model.google import Gemini
 import os
 
 # Set up the Streamlit app
@@ -19,7 +19,7 @@ if gemini_api_key and serp_api_key:
     researcher = Assistant(
         name="Researcher",
         role="Searches for relevant content ideas, trends, and best practices for LinkedIn posts based on user preferences",
-        llm=Gemini(id="gemini-1.5-flash"),
+        model=Gemini(id="gemini-1.5-flash"),
         description=dedent(
             """\
         You are a world-class content researcher. Given a LinkedIn post topic and style preferences, generate a list of relevant content ideas, industry trends, and best practices for creating effective LinkedIn posts.
@@ -34,12 +34,13 @@ if gemini_api_key and serp_api_key:
         ],
         tools=[SerpApiTools(api_key=serp_api_key)],
         add_datetime_to_instructions=True,
+        markdown=True,
     )
 
     writer = Assistant(
         name="Writer",
         role="Generates a compelling LinkedIn post based on user preferences, research insights, and best practices",
-        llm=Gemini(id="gemini-1.5-flash"),
+        model=Gemini(id="gemini-1.5-flash"),
         description=dedent(
             """\
         You are an expert LinkedIn content writer. Given a LinkedIn post topic, style preferences, and a list of research insights,
@@ -57,6 +58,7 @@ if gemini_api_key and serp_api_key:
         add_datetime_to_instructions=True,
         add_chat_history_to_prompt=True,
         num_history_messages=3,
+        markdown=True,
     )
 
     # Input fields for the user's LinkedIn post topic and style preferences
@@ -65,6 +67,10 @@ if gemini_api_key and serp_api_key:
 
     if st.button("Generate LinkedIn Post"):
         with st.spinner("Processing..."):
-            # Get the response from the assistant
-            response = writer.run(f"LinkedIn post on {post_topic} with style {style_preference}", stream=False)
+            # Get the research results
+            research_results = researcher.run(f"Linkedin Post topic: {post_topic} for the style preference: {style_preference}", stream=False)
+
+            # Generate the Linkedin Post Content
+            response = writer.run(f"LinkedIn post on '{post_topic}' with style '{style_preference}' using the following research:\n\n{research_results}", stream=False)
+            st.write("Linkedin Post Content")
             st.write(response)
